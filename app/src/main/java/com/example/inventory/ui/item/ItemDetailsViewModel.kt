@@ -13,20 +13,37 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-package com.example.inventory.ui.item
+package com.example.inventory
 
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import com.example.inventory.data.ItemsRepository
+import com.example.inventory.ui.item.ItemDetailsDestination
+import com.example.inventory.ui.item.ItemUiState
+import com.example.inventory.ui.item.toItemUiState
+import kotlinx.coroutines.flow.*
 
 /**
  * ViewModel to retrieve, update and delete an item from the data source.
  */
 class ItemDetailsViewModel(
-    savedStateHandle: SavedStateHandle
+    savedStateHandle: SavedStateHandle,
+    private val itemsRepository: ItemsRepository
 ) : ViewModel() {
 
     private val itemId: Int = checkNotNull(savedStateHandle[ItemDetailsDestination.itemIdArg])
+    val uiState: StateFlow<ItemUiState> =
+        itemsRepository.getItemStream(itemId)
+            .filterNotNull()
+            .map {
+                it.toItemUiState()
+            }.stateIn(
+                scope = viewModelScope,
+                started = SharingStarted.WhileSubscribed(TIMEOUT_MILLIS),
+                initialValue = ItemUiState()
+            )
+
 
     companion object {
         private const val TIMEOUT_MILLIS = 5_000L
